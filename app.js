@@ -20,50 +20,63 @@ app.listen(process.env.PORT || 10000, () => {
 // ✅ POST Webhook (Incoming Messages)
 app.post("/webhook", async (req, res) => {
   try {
-    if (
-        req.body.object === "whatsapp_business_account" &&
-  req.body.entry &&
-  req.body.entry[0].changes &&
-  req.body.entry[0].changes[0].value &&
-  req.body.entry[0].changes[0].value.messages &&
-  req.body.entry[0].changes[0].value.messages[0]
+    console.log("===== Incoming Webhook =====");
+console.log(JSON.stringify(req.body, null, 2));
+
+if (
+    req.body.object &&
+    req.body.entry &&
+    req.body.entry[0].changes &&
+    req.body.entry[0].changes[0].value.messages &&
+    req.body.entry[0].changes[0].value.messages[0].type === "text"
 ) {
+
   const value = req.body.entry[0].changes[0].value;
   const message = value.messages[0];
+
   const phone_number_id = value.metadata.phone_number_id;
   const from = message.from;
   const msg_body = message.text.body;
 
-  // ✅ Reply to WhatsApp user (optional)
-  await axios.post(
-      `https://graph.facebook.com/v20.0/${phone_number_id}/messages?access_token=${WHATSAPP_TOKEN}`,
-      {
-        messaging_product: "whatsapp",
-        to: from,
-        text: { body: "Received: " + msg_body }
-      },
-      { headers: { "Content-Type": "application/json" } }
-  );
+  console.log("PHONE:", phone_number_id);
+  console.log("FROM:", from);
+  console.log("MESSAGE:", msg_body);
 
-  // ✅ Forward the message to your domain URL
-  await axios.post(
-      "https://linkup:newlink_up34@linkup.software/whatsappchat-receive-message",
-      {
-        app_data: req.body,
-        text_message: msg_body,
-        sender: from
-      },
-      { headers: { "Content-Type": "application/json" } }
-  );
+  // ✅ SEND AUTOMATIC REPLAY TEXT TO WHATSAPP
+  try {
+    await axios.post(
+        `https://graph.facebook.com/v20.0/${phone_number_id}/messages?access_token=${token}`,
+        {
+          messaging_product: "whatsapp",
+          to: from,
+          text: {
+            body: "Message received successfully"
+          }
+        }
+    );
+  } catch (error) {
+    console.error("❌ ERROR sending reply to WhatsApp:", error.response?.data || error);
+  }
 
-  console.log("✅ Forwarded message to your domain");
+  // ✅ SEND YOUR DATA TO YOUR DOMAIN URL
+  try {
+    await axios.post(
+        "https://linkup:newlink_up34@linkup.software/whatsappchat-receive-message",
+        { app_data: req.body }
+    );
+  } catch (error) {
+    console.error("❌ ERROR sending data to domain:", error.response?.data || error);
+  }
+
+} else {
+  console.log("⚠️ No text message found or invalid structure.");
 }
 
-res.sendStatus(200);
+return res.sendStatus(200);
 
 } catch (err) {
-  console.error("❌ ERROR:", err.response?.data || err.message);
-  res.sendStatus(500);
+  console.error("💥 MAIN WEBHOOK ERROR:", err.response?.data || err);
+  return res.sendStatus(500);
 }
 });
 
