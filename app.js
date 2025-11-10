@@ -43,7 +43,7 @@ if (
   console.log("MESSAGE:", msg_body);
 
   // ✅ SEND AUTOMATIC REPLAY TEXT TO WHATSAPP
-  try {
+  /*try {
     await axios.post(
         `https://graph.facebook.com/v20.0/${phone_number_id}/messages?access_token=${token}`,
         {
@@ -56,7 +56,7 @@ if (
     );
   } catch (error) {
     console.error("❌ ERROR sending reply to WhatsApp:", error.response?.data || error);
-  }
+  }*/
 
   // ✅ SEND YOUR DATA TO YOUR DOMAIN URL
   try {
