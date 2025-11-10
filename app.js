@@ -83,7 +83,7 @@ return res.sendStatus(200);
 
 // ✅ GET Webhook Verification (Meta Setup)
 app.get("/webhook", (req, res) => {
-  const VERIFY_TOKEN = 9b988263f14deca34e84435b6e8e1d0e;  // ✅ MUST BE STRING
+  const VERIFY_TOKEN = "9b988263f14deca34e84435b6e8e1d0e";  // ✅ MUST BE STRING
 
 const mode = req.query["hub.mode"];
 console.log(mode)
