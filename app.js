@@ -23,64 +23,43 @@ const request = require("request"),
 app.listen(process.env.PORT || 10000, () => console.log("webhook is listening"));
 
 // Accepts POST requests at /webhook endpoint
-app.post("/webhook", (req, res) => {
-  // Parse the request body from the POST
-    let body = req.body;
-
-    // Check the Incoming webhook messageWHATSAPP_TOKEN
+app.post("/webhook", async (req, res) => {
+  try {
     console.log(JSON.stringify(req.body, null, 2));
 
-    // info on WhatsApp text message payload: https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks/payload-examples#text-messages
-    if (req.body.object) {
-      if (
+    if (
+        req.body.object &&
         req.body.entry &&
         req.body.entry[0].changes &&
-        req.body.entry[0].changes[0] &&
-        req.body.entry[0].changes[0].value.messages &&
-        req.body.entry[0].changes[0].value.messages[0]
-      ) {
-        let phone_number_id =
+        req.body.entry[0].changes[0].value.messages
+    ) {
+      let phone_number_id =
           req.body.entry[0].changes[0].value.metadata.phone_number_id;
-        let from = req.body.entry[0].changes[0].value.messages[0].from; // extract the phone number from the webhook payload
-        let msg_body = req.body.entry[0].changes[0].value.messages[0].text.body; // extract the message text from the webhook payload
-        axios({
-          method: "POST", // Required, HTTP method, a string, e.g. POST, GET
-          url:
-            "https://graph.facebook.com/v20.0/" +
-            phone_number_id +
-            "/messages?access_token=" +
-            token,
-          data: {
+      let from =
+          req.body.entry[0].changes[0].value.messages[0].from;
+      let msg_body =
+          req.body.entry[0].changes[0].value.messages[0].text.body;
+
+      await axios.post(
+          `https://graph.facebook.com/v20.0/${phone_number_id}/messages?access_token=${token}`,
+          {
             messaging_product: "whatsapp",
             to: from,
-            //text: { body: "Ack: " + msg_body },
-          },
-          headers: { "Content-Type": "application/json" },
-        });
-        axios({
-          method: "POST", // Required, HTTP method, a string, e.g. POST, GET https://developer.leaddial.co/developer/tenant/whatsapp-message-receive 
-          url:
-            "https://linkup:newlink_up34@linkup.software/whatsappchat-receive-message",
-          data: {
-            app_data : req.body
-          },
-          headers: { "Content-Type": "application/json" },
-        });
-        /*axios({
-          method: "POST", // Required, HTTP method, a string, e.g. POST, GET https://developer.leaddial.co/developer/tenant/whatsapp-message-receive 
-          url:
-            "https://snapit:mysnapit22@tweetstage.tweetsoftware.co/whatsappchat-receive-message",
-          data: {
-            app_data : req.body
-          },
-          headers: { "Content-Type": "application/json" },
-        });*/
-      }
-      res.sendStatus(200);
-    } else {
-      // Return a '404 Not Found' if event is not from a WhatsApp API
-      res.sendStatus(404);
+          }
+      );
+
+      await axios.post(
+          "https://linkup:newlink_up34@linkup.software/whatsappchat-receive-message",
+          { app_data: req.body }
+      );
     }
+
+    res.sendStatus(200);
+
+  } catch (err) {
+    console.error("WEBHOOK ERROR:", err.response ? err.response.data : err);
+    res.sendStatus(500);
+  }
 });
 
 // Accepts GET requests at the /webhook endpoint. You need this URL to setup webhook initially.
