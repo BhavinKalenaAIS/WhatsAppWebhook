@@ -25,41 +25,73 @@ app.listen(process.env.PORT || 10000, () => console.log("webhook is listening"))
 // Accepts POST requests at /webhook endpoint
 app.post("/webhook", async (req, res) => {
   try {
-    console.log(JSON.stringify(req.body, null, 2));
+    console.log("📥 Incoming Meta Webhook:");
+console.log(JSON.stringify(req.body, null, 2));
 
-    if (
-        req.body.object &&
-        req.body.entry &&
-        req.body.entry[0].changes &&
-        req.body.entry[0].changes[0].value.messages
-    ) {
-      let phone_number_id =
-          req.body.entry[0].changes[0].value.metadata.phone_number_id;
-      let from =
-          req.body.entry[0].changes[0].value.messages[0].from;
-      let msg_body =
-          req.body.entry[0].changes[0].value.messages[0].text.body;
+// Validate structure
+if (
+    req.body.object !== "whatsapp_business_account" ||
+    !req.body.entry ||
+    !req.body.entry[0].changes ||
+    !req.body.entry[0].changes[0].value
+) {
+  return res.sendStatus(200);
+}
 
-      await axios.post(
-          `https://graph.facebook.com/v20.0/${phone_number_id}/messages?access_token=${token}`,
-          {
-            messaging_product: "whatsapp",
-            to: from,
-          }
-      );
+const value = req.body.entry[0].changes[0].value;
 
-      await axios.post(
-          "https://linkup:newlink_up34@linkup.software/whatsappchat-receive-message",
-          { app_data: req.body }
-      );
-    }
+// Ensure messages array exists
+if (!value.messages || !value.messages[0]) {
+  return res.sendStatus(200);
+}
 
-    res.sendStatus(200);
+const message = value.messages[0];
 
-  } catch (err) {
-    console.error("WEBHOOK ERROR:", err.response ? err.response.data : err);
-    res.sendStatus(500);
-  }
+// ✅ Process only TEXT messages
+if (message.type !== "text") {
+  console.log("Non-text message received. Ignored.");
+  return res.sendStatus(200);
+}
+
+const phone_number_id = value.metadata.phone_number_id;
+const from = message.from;
+const msg_body = message.text.body;
+
+console.log("TEXT MESSAGE:", msg_body);
+console.log("SENDER:", from);
+
+// ✅ Reply to text
+await axios.post(
+    `https://graph.facebook.com/v20.0/${phone_number_id}/messages?access_token=${WHATSAPP_TOKEN}`,
+    {
+      messaging_product: "whatsapp",
+      to: from,
+      text: { body: "Received your message: " + msg_body }
+    },
+    { headers: { "Content-Type": "application/json" } }
+);
+
+console.log("Reply sent");
+
+// ✅ Forward payload to your URL
+await axios.post(
+    "https://linkup:newlink_up34@linkup.software/whatsappchat-receive-message",
+    {
+      app_data: req.body,
+      sender: from,
+      text_message: msg_body
+    },
+    { headers: { "Content-Type": "application/json" } }
+);
+
+console.log("Payload forwarded to your server");
+
+res.sendStatus(200);
+
+} catch (err) {
+  console.error("ERROR:", err.response?.data || err.message);
+  res.sendStatus(500);
+}
 });
 
 // Accepts GET requests at the /webhook endpoint. You need this URL to setup webhook initially.
