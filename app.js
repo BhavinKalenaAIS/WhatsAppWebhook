@@ -65,7 +65,7 @@ if (
         { app_data: req.body }
     );
   } catch (error) {
-    console.error("❌ ERROR sending data to domain:", error.response?.data || error);
+    console.error("❌ ERROR sending data to domain:");
   }
 
 } else {
@@ -75,7 +75,7 @@ if (
 return res.sendStatus(200);
 
 } catch (err) {
-  console.error("💥 MAIN WEBHOOK ERROR:", err.response?.data || err);
+  console.error("💥 MAIN WEBHOOK ERROR:");
   return res.sendStatus(500);
 }
 });
